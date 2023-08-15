@@ -162,17 +162,26 @@ impl Handler<CheckWordExisting> for PlayerSession {
 
 async fn word_exists(word: &str) -> bool {
     let dictionary_service = DictionaryService::new();
-    dictionary_service.word_exists(word).await.unwrap_or(false)
+    dictionary_service.word_exists(word.to_ascii_lowercase().as_str()).await.unwrap_or(false)
 }
 
 fn player_has_letters_for_word(letters: Vec<Letter>, word: &str) -> bool {
+    let mut letters_copy = letters.clone();
     for c in word.chars() {
-        if letters.iter().all(|l| {
-            l.letter.to_ascii_lowercase() != c
-        }) {
-            return false;
+        let found_letter_index = letters_copy.iter().position(|letter| {
+            letter.letter.to_ascii_lowercase() == c.to_ascii_lowercase()
+        });
+
+        match found_letter_index {
+            Some(index) => {
+                letters_copy.remove(index);
+            }
+            None => {
+                return false;
+            }
         }
     }
+
     true
 }
 
