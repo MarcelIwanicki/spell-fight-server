@@ -20,6 +20,7 @@ pub struct PlayerSession {
     pub health: u32,
     pub letters: Vec<Letter>,
     pub room_manager: Addr<RoomManager>,
+    pub last_ws_response: Option<WsResponse>,
     pub last_word_exists: WordExists,
     pub roll_dice_timeout: Option<SpawnHandle>,
 }
@@ -40,6 +41,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for PlayerSession {
 
                 match request {
                     WsRequest::Join => {
+                        if let Some(_) = self.last_ws_response.clone() {
+                            return;
+                        }
+
                         self.room_manager.do_send(
                             Join {
                                 user: self.player.clone(),
@@ -48,20 +53,28 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for PlayerSession {
                         );
                     }
                     WsRequest::CreateWord(word) => {
-                        self.room_manager.do_send(
-                            CreateWord {
-                                user: self.player.clone(),
-                                session_addr: ctx.address(),
-                                word,
+                        if let Some(ws_response) = self.last_ws_response.clone() {
+                            if let WsResponse::NextTurn(_) = ws_response {
+                                self.room_manager.do_send(
+                                    CreateWord {
+                                        user: self.player.clone(),
+                                        session_addr: ctx.address(),
+                                        word,
+                                    }
+                                )
                             }
-                        )
+                        }
                     }
                     WsRequest::RollDice => {
-                        ctx.address().do_send(
-                            DiceRolled {
-                                word_exists_event: self.last_word_exists.clone()
+                        if let Some(ws_response) = self.last_ws_response.clone() {
+                            if let WsResponse::CanRollDice(_) = ws_response {
+                                ctx.address().do_send(
+                                    DiceRolled {
+                                        word_exists_event: self.last_word_exists.clone()
+                                    }
+                                );
                             }
-                        );
+                        }
                     }
                 }
             }
@@ -78,6 +91,7 @@ impl Handler<NextTurn> for PlayerSession {
             ctx.cancel_future(future);
         }
         let next_turn_event = WsResponse::NextTurn(msg.clone());
+        self.last_ws_response = Some(next_turn_event.clone());
         let next_turn_json = serde_json::to_string(&next_turn_event);
         let next_turn_json = match next_turn_json {
             Ok(json) => json,
@@ -95,6 +109,7 @@ impl Handler<StartPreparationTime> for PlayerSession {
     fn handle(&mut self, msg: StartPreparationTime, ctx: &mut Self::Context) {
         self.letters = msg.letters.clone();
         let start_preparation_time_event = WsResponse::StartPreparationTime(msg.clone());
+        self.last_ws_response = Some(start_preparation_time_event.clone());
         let start_preparation_time_json = serde_json::to_string(&start_preparation_time_event);
         let start_preparation_time_json = match start_preparation_time_json {
             Ok(json) => json,
@@ -120,6 +135,7 @@ impl Handler<WordCreated> for PlayerSession {
 
     fn handle(&mut self, msg: WordCreated, ctx: &mut Self::Context) {
         let word_created_event = WsResponse::WordCreated(msg.clone());
+        self.last_ws_response = Some(word_created_event.clone());
         let word_created_json = serde_json::to_string(&word_created_event);
         let word_created_json = match word_created_json {
             Ok(json) => json,
@@ -190,6 +206,7 @@ impl Handler<CanRollDice> for PlayerSession {
 
     fn handle(&mut self, msg: CanRollDice, ctx: &mut Self::Context) {
         let can_roll_dice_message = WsResponse::CanRollDice(msg.clone());
+        self.last_ws_response = Some(can_roll_dice_message.clone());
         let can_roll_dice_json = serde_json::to_string(&can_roll_dice_message);
         let can_roll_dice_json = match can_roll_dice_json {
             Ok(json) => json,
@@ -241,6 +258,7 @@ impl Handler<DiceRolled> for PlayerSession {
             amount: msg.word_exists_event.player_index.clone(),
             new_letters: self.letters.clone(),
         });
+        self.last_ws_response = Some(dice_rolled_message.clone());
         let dice_rolled_json = serde_json::to_string(&dice_rolled_message);
         let dice_rolled_json = match dice_rolled_json {
             Ok(json) => json,
@@ -288,6 +306,7 @@ impl Handler<DamagePlayer> for PlayerSession {
 
     fn handle(&mut self, msg: DamagePlayer, ctx: &mut Self::Context) {
         let damage_player_message = WsResponse::DamagePlayer(msg.clone());
+        self.last_ws_response = Some(damage_player_message.clone());
         let damage_player_json = serde_json::to_string(&damage_player_message);
         let damage_player_json = match damage_player_json {
             Ok(json) => json,
@@ -306,6 +325,7 @@ impl Handler<TakeDamage> for PlayerSession {
         self.health = self.health.clone() - msg.damage;
 
         let damage_player_message = WsResponse::TakeDamage(msg.clone());
+        self.last_ws_response = Some(damage_player_message.clone());
         let damage_player_json = serde_json::to_string(&damage_player_message);
         let damage_player_json = match damage_player_json {
             Ok(json) => json,

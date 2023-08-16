@@ -49,6 +49,10 @@ impl Handler<CreateWord> for RoomManager {
 
     fn handle(&mut self, msg: CreateWord, _ctx: &mut Self::Context) {
         if let Some(room) = self.find_room(&msg.user) {
+            let is_player_turn = room.is_player_turn(msg.session_addr.clone());
+            if !is_player_turn {
+                return;
+            }
             room.on_word_created(msg.word, msg.session_addr);
         }
     }

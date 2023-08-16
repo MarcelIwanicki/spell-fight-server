@@ -23,6 +23,17 @@ impl Room {
         }
     }
 
+    pub fn is_player_turn(&self, player_session_addr: Addr<PlayerSession>) -> bool {
+        let player_index = self.sessions.iter()
+            .position(|session| &player_session_addr == session);
+        let player_index = match player_index {
+            Some(index) => index,
+            None => return false,
+        };
+        let player_index = u32::try_from(player_index).unwrap_or(0);
+        player_index == self.turn_of_player_index
+    }
+
     pub fn increase_turn_index(&mut self) {
         let max_player = u32::try_from(self.max_players.clone()).unwrap_or(0);
         if self.turn_of_player_index.clone() < max_player {

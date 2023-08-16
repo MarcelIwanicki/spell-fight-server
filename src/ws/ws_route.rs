@@ -35,6 +35,7 @@ pub async fn ws_route(
         health: 100,
         letters: Vec::new(),
         room_manager: room_manager.get_ref().clone(),
+        last_ws_response: None,
         last_word_exists: WordExists {
             word: String::new(),
             damage: 0,
