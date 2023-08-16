@@ -25,6 +25,24 @@ pub struct PlayerSession {
     pub roll_dice_timeout: Option<SpawnHandle>,
 }
 
+impl PlayerSession {
+    pub fn new(player: User, room_manager: Addr<RoomManager>) -> PlayerSession {
+        PlayerSession {
+            player,
+            health: 100,
+            letters: Vec::new(),
+            room_manager,
+            last_ws_response: None,
+            last_word_exists: WordExists {
+                word: String::new(),
+                damage: 0,
+                player_index: 0,
+            },
+            roll_dice_timeout: None,
+        }
+    }
+}
+
 impl Actor for PlayerSession {
     type Context = ws::WebsocketContext<Self>;
 }

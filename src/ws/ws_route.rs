@@ -2,7 +2,6 @@ use actix::Addr;
 use actix_web::{HttpRequest, HttpResponse, web};
 use actix_web_actors::ws;
 
-use crate::model::player_session_messages::WordExists;
 use crate::model::user::User;
 use crate::service::facebook_service::FacebookService;
 use crate::ws::player_session::PlayerSession;
@@ -29,21 +28,7 @@ pub async fn ws_route(
     };
 
     let player = User::from_facebook_profile(facebook_profile);
-
-    let session = PlayerSession {
-        player,
-        health: 100,
-        letters: Vec::new(),
-        room_manager: room_manager.get_ref().clone(),
-        last_ws_response: None,
-        last_word_exists: WordExists {
-            word: String::new(),
-            damage: 0,
-            player_index: 0,
-        },
-        roll_dice_timeout: None,
-    };
-
+    let session = PlayerSession::new(player, room_manager.get_ref().clone());
     let response = ws::start(session, &req, stream);
     let response = match response {
         Ok(res) => res,
