@@ -11,7 +11,7 @@ use crate::model::user::User;
 use crate::model::ws_request::WsRequest;
 use crate::model::ws_response::{DiceRolledResponse, WsResponse};
 use crate::service::dictionary_service::DictionaryService;
-use crate::util::constants::MAX_PLAYERS_PER_ROOM;
+use crate::util::constants::{MAX_PLAYERS_PER_ROOM, ROLL_DICE_SECONDS, TURN_SECONDS};
 use crate::ws::letters::{get_random_letters, get_word_value};
 use crate::ws::room_manager::RoomManager;
 
@@ -122,7 +122,7 @@ impl Handler<StartPreparationTime> for PlayerSession {
         ctx.run_later(Duration::from_secs(msg.seconds), |_, ctx| {
             let start_game_event = NextTurn {
                 player_index: 0,
-                seconds: 20,
+                seconds: TURN_SECONDS,
             };
 
             let _ = ctx.address().do_send(start_game_event);
@@ -234,7 +234,7 @@ impl Handler<WordExists> for PlayerSession {
     fn handle(&mut self, msg: WordExists, ctx: &mut Self::Context) {
         self.last_word_exists = msg.clone();
 
-        ctx.address().do_send(CanRollDice { seconds: 20 });
+        ctx.address().do_send(CanRollDice { seconds: ROLL_DICE_SECONDS });
 
         let roll_dice_timeout_future = move |_session: &mut PlayerSession, ctx: &mut Self::Context| {
             ctx.address().do_send(DiceRolled {
@@ -242,7 +242,7 @@ impl Handler<WordExists> for PlayerSession {
             });
         };
         self.roll_dice_timeout = Some(
-            ctx.run_later(Duration::from_secs(20), roll_dice_timeout_future)
+            ctx.run_later(Duration::from_secs(ROLL_DICE_SECONDS), roll_dice_timeout_future)
         );
     }
 }

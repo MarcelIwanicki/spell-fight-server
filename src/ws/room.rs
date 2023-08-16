@@ -45,7 +45,7 @@ impl Room {
         for player in &self.sessions {
             let _ = player.do_send(NextTurn {
                 player_index: usize::try_from(self.turn_of_player_index.clone()).unwrap_or(0),
-                seconds: 20,
+                seconds: TURN_SECONDS,
             });
         }
     }
