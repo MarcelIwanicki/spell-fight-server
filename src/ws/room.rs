@@ -36,7 +36,7 @@ impl Room {
 
     pub fn increase_turn_index(&mut self) {
         let max_player = u32::try_from(self.max_players.clone()).unwrap_or(0);
-        if self.turn_of_player_index.clone() < max_player {
+        if self.turn_of_player_index.clone() < max_player - 1 {
             self.turn_of_player_index = self.turn_of_player_index.clone() + 1;
         } else {
             self.turn_of_player_index = 0;
