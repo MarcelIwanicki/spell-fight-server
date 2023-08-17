@@ -31,3 +31,9 @@ pub struct Join {
     pub user: User,
     pub session_addr: Addr<PlayerSession>,
 }
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct RoomNextTurnTimeoutInit {
+    pub user: User,
+}

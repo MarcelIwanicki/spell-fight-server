@@ -6,7 +6,7 @@ use rand::seq::SliceRandom;
 
 use crate::model::letter::Letter;
 use crate::model::player_session_messages::{CanRollDice, CheckWordExisting, DamagePlayer, DiceRolled, NextTurn, StartPreparationTime, TakeDamage, WordCreated, WordDoesNotExist, WordExists};
-use crate::model::room_manager_messages::{CreateWord, Join, RoomDamagePlayer, RoomNextTurn};
+use crate::model::room_manager_messages::{CreateWord, Join, RoomDamagePlayer, RoomNextTurn, RoomNextTurnTimeoutInit};
 use crate::model::user::User;
 use crate::model::ws_request::WsRequest;
 use crate::model::ws_response::{DiceRolledResponse, WsResponse};
@@ -118,6 +118,10 @@ impl Handler<NextTurn> for PlayerSession {
             }
         };
         let _ = ctx.text(next_turn_json);
+        
+        self.room_manager.do_send(RoomNextTurnTimeoutInit {
+            user: self.player.clone()
+        });
     }
 }
 

@@ -1,4 +1,4 @@
-use actix::Addr;
+use actix::{Addr, SpawnHandle};
 
 use crate::model::player_session_messages::{CheckWordExisting, DamagePlayer, NextTurn, StartPreparationTime, TakeDamage, WordCreated};
 use crate::model::user::User;
@@ -8,6 +8,7 @@ use crate::ws::player_session::PlayerSession;
 
 pub struct Room {
     pub users: Vec<User>,
+    pub next_turn_timeout: Option<SpawnHandle>,
     turn_of_player_index: u32,
     sessions: Vec<Addr<PlayerSession>>,
     max_players: usize,
@@ -16,8 +17,9 @@ pub struct Room {
 impl Room {
     pub fn new(max_players: usize) -> Room {
         Room {
-            sessions: Vec::new(),
             users: Vec::new(),
+            next_turn_timeout: None,
+            sessions: Vec::new(),
             turn_of_player_index: 0,
             max_players,
         }
@@ -35,6 +37,7 @@ impl Room {
     }
 
     pub fn increase_turn_index(&mut self) {
+        self.next_turn_timeout = None;
         let max_player = u32::try_from(self.max_players.clone()).unwrap_or(0);
         if self.turn_of_player_index.clone() < max_player - 1 {
             self.turn_of_player_index = self.turn_of_player_index.clone() + 1;
