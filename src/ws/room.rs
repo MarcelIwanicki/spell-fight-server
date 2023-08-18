@@ -13,6 +13,7 @@ pub struct Room {
     pub sessions: Vec<Addr<PlayerSession>>,
     turn_of_player_index: u32,
     max_players: usize,
+    game_started: bool,
 }
 
 impl Room {
@@ -23,6 +24,7 @@ impl Room {
             sessions: Vec::new(),
             turn_of_player_index: 0,
             max_players,
+            game_started: false,
         }
     }
 
@@ -63,10 +65,11 @@ impl Room {
     }
 
     pub fn is_full(&self) -> bool {
-        self.sessions.len() == self.max_players
+        self.game_started.clone() || self.sessions.len() == self.max_players
     }
 
-    pub fn start_game(&self) {
+    pub fn start_game(&mut self) {
+        self.game_started = true;
         for player in &self.sessions {
             let _ = player.do_send(StartPreparationTime {
                 seconds: PREPARATION_TIME_SECONDS,
