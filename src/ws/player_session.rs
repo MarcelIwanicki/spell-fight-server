@@ -5,8 +5,8 @@ use actix_web_actors::ws;
 use rand::seq::SliceRandom;
 
 use crate::model::letter::Letter;
-use crate::model::player_session_messages::{CanRollDice, CheckWordExisting, DamagePlayer, DiceRolled, NextTurn, StartPreparationTime, TakeDamage, WordCreated, WordDoesNotExist, WordExists};
-use crate::model::room_manager_messages::{CreateWord, Join, RoomDamagePlayer, RoomNextTurn, RoomNextTurnTimeoutInit};
+use crate::model::player_session_messages::{CanRollDice, CheckWordExisting, DamagePlayer, DiceRolled, NextTurn, PlayerDead, StartPreparationTime, TakeDamage, WordCreated, WordDoesNotExist, WordExists};
+use crate::model::room_manager_messages::{CreateWord, Join, RoomDamagePlayer, RoomNextTurn, RoomNextTurnTimeoutInit, RoomPlayerDead};
 use crate::model::user::User;
 use crate::model::ws_request::WsRequest;
 use crate::model::ws_response::{DiceRolledResponse, WsResponse};
@@ -118,7 +118,7 @@ impl Handler<NextTurn> for PlayerSession {
             }
         };
         let _ = ctx.text(next_turn_json);
-        
+
         self.room_manager.do_send(RoomNextTurnTimeoutInit {
             user: self.player.clone()
         });
@@ -345,6 +345,12 @@ impl Handler<TakeDamage> for PlayerSession {
 
     fn handle(&mut self, msg: TakeDamage, ctx: &mut Self::Context) {
         self.health = self.health.clone() - msg.damage;
+        if self.health.clone() <= 0 {
+            self.room_manager.do_send(RoomPlayerDead {
+                user: self.player.clone(),
+                player_index: msg.player_index.clone(),
+            });
+        }
 
         let damage_player_message = WsResponse::TakeDamage(msg.clone());
         self.last_ws_response = Some(damage_player_message.clone());
@@ -356,5 +362,21 @@ impl Handler<TakeDamage> for PlayerSession {
             }
         };
         ctx.text(damage_player_json);
+    }
+}
+
+impl Handler<PlayerDead> for PlayerSession {
+    type Result = ();
+
+    fn handle(&mut self, msg: PlayerDead, ctx: &mut Self::Context) {
+        let player_dead_message = WsResponse::PlayerDead(msg.clone());
+        let player_dead_json = serde_json::to_string(&player_dead_message);
+        let player_dead_json = match player_dead_json {
+            Ok(json) => json,
+            Err(_) => {
+                return;
+            }
+        };
+        ctx.text(player_dead_json);
     }
 }

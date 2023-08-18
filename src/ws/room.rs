@@ -1,6 +1,7 @@
 use actix::{Addr, SpawnHandle};
 
-use crate::model::player_session_messages::{CheckWordExisting, DamagePlayer, NextTurn, StartPreparationTime, TakeDamage, WordCreated};
+use crate::model::player_session_messages::{CheckWordExisting, DamagePlayer, NextTurn, PlayerDead, StartPreparationTime, TakeDamage, WordCreated};
+use crate::model::room_manager_messages::RoomPlayerDead;
 use crate::model::user::User;
 use crate::util::constants::*;
 use crate::ws::letters::get_random_letters;
@@ -9,8 +10,8 @@ use crate::ws::player_session::PlayerSession;
 pub struct Room {
     pub users: Vec<User>,
     pub next_turn_timeout: Option<SpawnHandle>,
+    pub sessions: Vec<Addr<PlayerSession>>,
     turn_of_player_index: u32,
-    sessions: Vec<Addr<PlayerSession>>,
     max_players: usize,
 }
 
@@ -101,13 +102,29 @@ impl Room {
     }
 
     pub fn on_damage_player(&self, damage: u32, player_index: usize) {
-        self.sessions[player_index.clone()].do_send(TakeDamage { damage: damage.clone() });
+        self.sessions[player_index.clone()].do_send(TakeDamage {
+            damage: damage.clone(),
+            player_index: player_index.clone(),
+        });
 
         for player in &self.sessions {
             player.do_send(DamagePlayer {
                 player_index: player_index.clone(),
                 damage: damage.clone(),
             });
+        }
+    }
+
+    pub fn on_player_dead(&mut self, msg: RoomPlayerDead) {
+        if let Some(user_index) = self.users.iter().position(|u| u.clone() == msg.user) {
+            self.users.remove(user_index);
+        }
+        self.sessions.remove(msg.player_index);
+
+        for player in &self.sessions {
+            player.do_send(PlayerDead {
+                player_index: msg.player_index.clone()
+            })
         }
     }
 }

@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use actix::{Actor, AsyncContext, Context, Handler};
 
-use crate::model::room_manager_messages::{CreateWord, Join, RoomDamagePlayer, RoomNextTurn, RoomNextTurnTimeoutInit};
+use crate::model::room_manager_messages::{CreateWord, Join, RoomDamagePlayer, RoomNextTurn, RoomNextTurnTimeoutInit, RoomPlayerDead};
 use crate::model::user::User;
 use crate::util::constants::{MAX_PLAYERS_PER_ROOM, TURN_SECONDS};
 use crate::ws::room::Room;
@@ -98,9 +98,19 @@ impl Handler<RoomNextTurnTimeoutInit> for RoomManager {
 impl Handler<RoomDamagePlayer> for RoomManager {
     type Result = ();
 
-    fn handle(&mut self, msg: RoomDamagePlayer, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: RoomDamagePlayer, _ctx: &mut Self::Context) {
         if let Some(room) = self.find_room(&msg.user) {
             room.on_damage_player(msg.damage, msg.player_index);
+        }
+    }
+}
+
+impl Handler<RoomPlayerDead> for RoomManager {
+    type Result = ();
+
+    fn handle(&mut self, msg: RoomPlayerDead, _ctx: &mut Self::Context) {
+        if let Some(room) = self.find_room(&msg.user) {
+            room.on_player_dead(msg);
         }
     }
 }
