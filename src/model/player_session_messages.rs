@@ -75,4 +75,12 @@ pub struct DamagePlayer {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TakeDamage {
     pub damage: u32,
+    pub player_index: usize,
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PlayerDead {
+    pub player_index: usize,
 }

@@ -27,6 +27,13 @@ pub struct RoomDamagePlayer {
 
 #[derive(Message)]
 #[rtype(result = "()")]
+pub struct RoomPlayerDead {
+    pub user: User,
+    pub player_index: usize,
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
 pub struct Join {
     pub user: User,
     pub session_addr: Addr<PlayerSession>,
